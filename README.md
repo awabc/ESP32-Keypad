@@ -25,7 +25,7 @@ The system supports both Bluetooth Low Energy (BLE) HID and USB HID operation, a
   <li><b>Connectivity</b>:
     <ul>
       <li>USB 2.0 connector for both data and power</li>
-      <li>Integrated ESD protection on USB data lines via TVS diode</li>
+      <li>ESD protection on USB data lines via TVS diode</li>
     </ul>
   </li>
   <li><b>System Control</b>:
