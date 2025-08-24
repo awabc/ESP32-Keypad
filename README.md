@@ -43,7 +43,7 @@ The system supports both Bluetooth Low Energy (BLE) HID and USB HID operation, a
 <h2>Firmware Features</h2>
 <ul>
   <li>Implemented using the Arduino framework for ESP32</li>
-  <li>Provides both BLE HID keyboard and <b>USB HID keyboard</b> operation</li>
+  <li>Provides both BLE HID keyboard and USB HID keyboard operation</li>
   <li>Automatic deep sleep feature after 3 minutes of inactivity</li>
 </ul>
 
