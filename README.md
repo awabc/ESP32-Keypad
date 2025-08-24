@@ -3,7 +3,7 @@
 <h2>Project Overview</h2>
 <p>
 This project is a custom 12-key numpad built around the ESP32-S3-WROOM-1 module. 
-The system supports both Bluetooth Low Energy (BLE) HID and <b>USB HID</b> operation, allowing it to function as a standalone wireless or wired keyboard.
+The system supports both Bluetooth Low Energy (BLE) HID and USB HID operation, allowing it to function as a standalone wireless or wired keyboard.
 </p>
 
 <h2>Hardware Features</h2>
