@@ -1,0 +1,369 @@
+#include "USB.h"
+#include "USBHIDKeyboard.h"
+#include "BluetoothSerial.h"
+#include "BLEDevice.h"
+#include "BLEHIDDevice.h"
+#include "HIDKeyboardTypes.h"
+#include "HIDTypes.h"
+
+// Pin definitions for individual switches
+#define NUM_KEYS 12
+uint8_t keyPins[NUM_KEYS] = {
+  1,   // SW0 -> '0'
+  2,   // SW1 -> '1' 
+  3,   // SW2 -> '2'
+  4,   // SW3 -> '3'
+  5,   // SW4 -> '4'
+  6,   // SW5 -> '5'
+  7,   // SW6 -> '6'
+  10,  // SW7 -> '7'
+  11,  // SW8 -> '8'
+  12,  // SW9 -> '9'
+  13,  // SWENTER -> Enter
+  14   // SWDELETE -> Delete
+};
+
+// Key mapping 
+char keyMap[NUM_KEYS] = {
+  '1', '2', '3',   
+  '4', '5', '6',   
+  '7', '8', '9',   
+  '#', '0', '*'     
+};
+
+// Key state tracking (debounce 50 ms)
+bool keyPressed[NUM_KEYS] = {false};
+bool lastKeyState[NUM_KEYS] = {false};
+unsigned long lastDebounceTime[NUM_KEYS] = {0};
+const unsigned long debounceDelay = 50; 
+
+// Sleep mode settings
+const unsigned long SLEEP_TIMEOUT = 180000; // 3 minutes in milliseconds
+unsigned long lastActivityTime = 0;
+bool goingToSleep = false;
+
+// Connection state
+bool usbConnected = false;
+bool bluetoothConnected = false;
+
+// Bluetooth HID Report Map
+USBHIDKeyboard usbKeyboard;
+BLEHIDDevice* hid;
+BLECharacteristic* input;
+BLECharacteristic* output;
+BLEServer* pServer;
+
+static const uint8_t _hidReportDescriptor[] = {
+  USAGE_PAGE(1),      0x01,          
+  USAGE(1),           0x06,          
+  COLLECTION(1),      0x01,         
+  REPORT_ID(1),       0x01,         
+  USAGE_PAGE(1),      0x07,          
+  USAGE_MINIMUM(1),   0xE0,          
+  USAGE_MAXIMUM(1),   0xE7,          
+  LOGICAL_MINIMUM(1), 0x00,          
+  LOGICAL_MAXIMUM(1), 0x01,         
+  REPORT_SIZE(1),     0x01,          
+  REPORT_COUNT(1),    0x08,         
+  HIDINPUT(1),        0x02,         
+  REPORT_COUNT(1),    0x01,         
+  REPORT_SIZE(1),     0x08,          
+  HIDINPUT(1),        0x01,        
+  REPORT_COUNT(1),    0x06,         
+  REPORT_SIZE(1),     0x08,        
+  LOGICAL_MINIMUM(1), 0x00,       
+  LOGICAL_MAXIMUM(1), 0x65,        
+  USAGE_MINIMUM(1),   0x00,        
+  USAGE_MAXIMUM(1),   0x65,          
+  HIDINPUT(1),        0x00,          
+  END_COLLECTION(0)                 
+};
+
+class MyServerCallbacks: public BLEServerCallbacks {
+  void onConnect(BLEServer* pServer) {
+    bluetoothConnected = true;
+    Serial.println("Bluetooth device connected");
+  }
+
+  void onDisconnect(BLEServer* pServer) {
+    bluetoothConnected = false;
+    Serial.println("Bluetooth device disconnected");
+    // Restart advertising
+    pServer->getAdvertising()->start();
+  }
+};
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println("ESP32-S3 Numberpad Starting..."); }
+
+// Initialization
+  setupKeyPins();
+  
+  lastActivityTime = millis();
+  
+  // Check if waking up from deep sleep
+  esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
+  if (wakeup_reason == ESP_SLEEP_WAKEUP_EXT1) {
+    Serial.println("Woke up from deep sleep due to key press");
+  }
+  
+  // Initialize appropriate connection
+  checkUSBConnection();
+  
+  if (usbConnected) {
+    setupUSB();
+  } else {
+    setupBluetooth();
+  }
+  
+  Serial.println("Setup complete!");
+  Serial.println("Key mapping:");
+  for (int i = 0; i < NUM_KEYS; i++) {
+    Serial.printf("Pin %d -> '%c'\n", keyPins[i], keyMap[i]);
+  }
+  Serial.println("Will enter deep sleep after 3 minutes of inactivity");
+}
+
+void setupKeyPins() {
+  // internal pull-ups
+  for (int i = 0; i < NUM_KEYS; i++) {
+    pinMode(keyPins[i], INPUT_PULLUP);
+    Serial.printf("Configured pin %d as INPUT_PULLUP for key '%c'\n", keyPins[i], keyMap[i]);
+  }
+  
+  // Create a bitmask for all key pins to WAKE UP FROM SLEEP
+  uint64_t wakeupMask = 0;
+  for (int i = 0; i < NUM_KEYS; i++) {
+    wakeupMask |= (1ULL << keyPins[i]);
+  }
+
+  esp_sleep_enable_ext1_wakeup(wakeupMask, ESP_EXT1_WAKEUP_ANY_LOW);
+  
+  Serial.printf("Wake-up configured for pins: 0x%llX\n", wakeupMask);
+
+  void checkUSBConnection() {
+
+  delay(1000);
+  usbConnected = true; // Start with USB by default
+  
+  Serial.printf("Starting in USB mode: %s\n", usbConnected ? "Yes" : "No");
+}
+
+void setupUSB() {
+  Serial.println("Setting up USB HID...");
+  USB.begin();
+  usbKeyboard.begin();
+  Serial.println("USB HID initialized");
+}
+
+void setupBluetooth() {
+  Serial.println("Setting up Bluetooth HID...");
+  
+  BLEDevice::init("ESP32 Numberpad");
+  pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new MyServerCallbacks());
+
+  hid = new BLEHIDDevice(pServer);
+  input = hid->inputReport(1); 
+  output = hid->outputReport(1);
+
+  hid->manufacturer()->setValue("Awab");
+  hid->pnp(0x02, 0xe502, 0xa111, 0x0210);
+  hid->hidInfo(0x00, 0x01);
+
+  hid->reportMap((uint8_t*)_hidReportDescriptor, sizeof(_hidReportDescriptor));
+  hid->startServices();
+
+  BLEAdvertising* pAdvertising = pServer->getAdvertising();
+  pAdvertising->setAppearance(HID_KEYBOARD);
+  pAdvertising->addServiceUUID(hid->hidService()->getUUID());
+  pAdvertising->start();
+  
+  Serial.println("Bluetooth HID initialized and advertising...");
+}
+
+void loop() {
+  
+  checkSleepTimeout();
+  
+  if (goingToSleep) {
+    return;
+  }
+  
+  scanKeys();
+  
+  delay(5);
+}
+
+bool checkUSBStatus() {
+  // Re-check USB connection status
+  return !digitalRead(USB_DETECT_PIN);
+}
+
+void handleConnectionChange() {
+  if (usbConnected) {
+    Serial.println("Switching to USB mode...");
+    if (bluetoothConnected) {
+      BLEDevice::deinit(true);
+    }
+    setupUSB();
+  } else {
+    Serial.println("Switching to Bluetooth mode...");
+    setupBluetooth();
+  }
+}
+
+void scanKeys() {
+  unsigned long currentTime = millis();
+  
+  for (int i = 0; i < NUM_KEYS; i++) {
+    // Read current pin state 
+    bool currentState = !digitalRead(keyPins[i]);
+    
+    if (currentState != lastKeyState[i]) {
+      // Reset debounce timer
+      lastDebounceTime[i] = currentTime;
+    }
+    
+    if ((currentTime - lastDebounceTime[i]) > debounceDelay) {
+      if (currentState != keyPressed[i]) {
+        keyPressed[i] = currentState;
+        if (currentState) {
+          handleKeyPress(i);
+        } else {
+          handleKeyRelease(i);
+        }
+      }
+    }
+    
+    lastKeyState[i] = currentState;
+  }
+}
+
+void handleKeyPress(int keyIndex) {
+  char key = keyMap[keyIndex];
+  Serial.printf("Key pressed: '%c' on pin %d\n", key, keyPins[keyIndex]);
+  
+  lastActivityTime = millis();
+  
+  if (usbConnected) {
+    sendUSBKey(key);
+  } else if (bluetoothConnected) {
+    sendBluetoothKey(key);
+  }
+}
+
+void handleKeyRelease(int keyIndex) {
+  char key = keyMap[keyIndex];
+  Serial.printf("Key released: '%c' on pin %d\n", key, keyPins[keyIndex]);
+  
+  lastActivityTime = millis();
+  
+  if (usbConnected) {
+    releaseUSBKey(key);
+  } else if (bluetoothConnected) {
+    releaseBluetoothKey(key);
+  }
+}
+
+void sendUSBKey(char key) {
+  switch (key) {
+    case '0' ... '9':
+      usbKeyboard.press(key);
+      break;
+    case '*': // Backspace/Delete
+      usbKeyboard.press(KEY_BACKSPACE);
+      break;
+    case '#': // Enter
+      usbKeyboard.press(KEY_RETURN);
+      break;
+  }
+}
+
+void releaseUSBKey(char key) {
+  switch (key) {
+    case '0' ... '9':
+      usbKeyboard.release(key);
+      break;
+    case '*':
+      usbKeyboard.release(KEY_BACKSPACE);
+      break;
+    case '#': 
+      usbKeyboard.release(KEY_RETURN);
+      break;
+  }
+}
+
+void sendBluetoothKey(char key) {
+  uint8_t report[8] = {0}; // Keyboard HID report
+  
+  uint8_t hidKey = charToHIDKey(key);
+  if (hidKey != 0) {
+    report[2] = hidKey; 
+    input->setValue(report, 8);
+    input->notify();
+  }
+}
+
+void releaseBluetoothKey(char key) {
+  uint8_t report[8] = {0}; 
+  input->setValue(report, 8);
+  input->notify();
+}
+
+uint8_t charToHIDKey(char key) {
+  switch (key) {
+    case '0': return 0x27;  
+    case '1': return 0x1E; 
+    case '2': return 0x1F; 
+    case '3': return 0x20; 
+    case '4': return 0x21; 
+    case '5': return 0x22; 
+    case '6': return 0x23; 
+    case '7': return 0x24; 
+    case '8': return 0x25; 
+    case '9': return 0x26; 
+    case '*': return 0x2A; 
+    case '#': return 0x28; 
+    default: return 0;
+  }
+}
+
+// Sleep management
+void checkSleepTimeout() {
+  unsigned long currentTime = millis();
+  unsigned long timeSinceActivity = currentTime - lastActivityTime;
+  
+  if (timeSinceActivity >= SLEEP_TIMEOUT) {
+    enterDeepSleep();
+  }
+}
+
+void enterDeepSleep() {
+  Serial.println("Entering deep sleep mode due to inactivity");
+  
+  goingToSleep = true;
+  
+  if (bluetoothConnected) {
+    BLEDevice::deinit(true);
+    bluetoothConnected = false;
+  }
+  
+  delay(100);
+  
+  esp_deep_sleep_start();
+}
+
+bool anyKeyPressed() {
+  for (int i = 0; i < NUM_KEYS; i++) {
+    if (!digitalRead(keyPins[i])) { 
+      return true;
+    }
+  }
+  return false;
+}
+
+void resetSleepTimer() {
+  lastActivityTime = millis();
+}
