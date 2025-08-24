@@ -50,8 +50,8 @@ The system supports both Bluetooth Low Energy (BLE) HID and USB HID operation, a
 <h2>Files</h2>
 <ul>
   <li><code>main</code> – Source code for ESP32-S3</li>
-  <li><code>schematic</code> – Altium schematic file</li>
-  <li><code>/pcb</code> – PCB file</li>
+  <li><code>numpad.schdoc</code> – Altium schematic file</li>
+  <li><code>pcb_numpad.pcbdoc</code> – PCB file</li>
 </ul>
 
 <h2>Potential Extensions</h2>
