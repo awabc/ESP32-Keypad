@@ -47,11 +47,11 @@ The system supports both Bluetooth Low Energy (BLE) HID and USB HID operation, a
   <li>Automatic deep sleep feature after 3 minutes of inactivity</li>
 </ul>
 
-<h2>Repository Structure</h2>
+<h2>Files</h2>
 <ul>
-  <li><code>/hardware</code> – Altium schematic and PCB layout files</li>
-  <li><code>/firmware</code> – Source code for ESP32-S3 (Arduino framework)</li>
-  <li><code>/images</code> – Images</li>
+  <li><code>main</code> – Source code for ESP32-S3</li>
+  <li><code>schematic</code> – Altium schematic file</li>
+  <li><code>/pcb</code> – PCB file</li>
 </ul>
 
 <h2>Potential Extensions</h2>
