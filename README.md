@@ -18,7 +18,7 @@ The system supports both Bluetooth Low Energy (BLE) HID and USB HID operation, a
   <li><b>Power Management</b>:
     <ul>
       <li>BQ24074 battery charger and power-path management IC</li>
-      <li>Supports single-cell Li-ion battery charging</li>
+      <li>Uses 500 mAh LiPo battery</li>
       <li>Simultaneous operation while charging via USB</li>
     </ul>
   </li>
