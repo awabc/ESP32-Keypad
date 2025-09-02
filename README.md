@@ -64,15 +64,15 @@ The system supports both Bluetooth Low Energy (BLE) HID and USB HID operation, a
 <table align="center">
   <tr>
     <td align="center">
-      <img src="3d render.png" alt="PCB 3D Model" width="300"/><br/>
+      <img src="pcb3.png" alt="PCB 3D Model" width="300"/><br/>
       <i>PCB 3D Model</i>
     </td>
     <td align="center">
-      <img src="ground pour.png" alt="PCB Design" width="300"/><br/>
+      <img src="pcb1.png" alt="PCB Design" width="300"/><br/>
       <i>PCB Design</i>
     </td>
     <td align="center">
-      <img src="no ground pour.png" alt="PCB Design (Removed Ground Pour for Visibility)" width="300"/><br/>
+      <img src="pcb2.png" alt="PCB Design (Removed Ground Pour for Visibility)" width="300"/><br/>
       <i>PCB Design (Removed Ground Pour for Visibility)</i>
     </td>
   </tr>
