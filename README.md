@@ -60,6 +60,19 @@ The system supports both Bluetooth Low Energy (BLE) HID and USB HID operation, a
   <li>Expansion to larger key matrices or custom layouts</li>
 </ul>
 
+<h2>PCBWay Review</h2>
+<ul>
+  Soon after uploading my design and code to Github, I was contacted by PCBWay who offered to prototype the board. Though the project was sponsored by them, this review is completely honest and not influenced in any way by PCBWay.
+
+The ordering process was straightforward: I uploaded my Gerber files and their review team quickly verified everything before payment and production. The boards arrived about a week later, firmly packaged in a tight bubble wrap.
+
+In terms of quality, the silkscreen labeling stood out to me, as it is very clear, even for the smaller text on my board. The pads are well aligned and fit my components perfectly. The solder mask has a smooth finish, and overall the board looks very nice.
+
+Unrelated to the board itself, I appreciated the communication from PCBWay. I'm not sure how other PCB manufacturers do it, but PCBWay constantly provided updates along every step of production and shipment, so I always knew exactly what was going on with my boards or where my boards were.
+
+Overall, the quality is solid and dependable and the process is simple (even for a beginner). I'll be using PCBWay again for future projects and I encourage you to look into them and maybe give them a try.
+</ul>
+
 <h2>Images</h2>
 <table align="center">
   <tr>
